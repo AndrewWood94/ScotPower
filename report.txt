@@ -1,0 +1,37 @@
+
+Keyword Search
+
+Initially I set up the keyword search using SQL ILIKE commands on the relevant database columns. However, when I was returning the results, there was no clear way to 
+determine which results were better than others. I therefore decided to use a full-text search instead using ts_vector. This allowed for the results to be scored
+(and thus ranked) based on how well the query keywords matched the database columns.
+
+Vector Search
+I used HuggingFace sentence-transformers all-MiniLM-L6-v2 model to generate my vector embeddings. This was chosen over an openAI model as it does not require an API
+key, and can used freely, which was what was needed for this test situation.
+
+Combined Search
+Both search search types include scores indicating how well they match the query. I was therefore able to combine the results from both search types and then order them
+by the score. I did not include any weighting when combining the two search results, but this would be a good thing to tune in future, when testing on real data.
+When sorting by date, I wanted to ensure that the most relevant results were returned, not just the oldest or newest with a very low match score. I therefore limited the
+number of search results returned by both queries so that only the best are passed on to be date-sorted.
+Combining the data, removing duplicates and sorting the data in the manner that I am is not the most efficient way of doing things, and it would be faster to have a more 
+complex SQL query which includes this step (with some weighting between the score and the publication date). However, for the context we are working in (searching for 
+magazine content), users would likely not want more than the top ~50 matches, and this amount can be sorted very quickly in python.
+Both search types return a curtailed version of the magazine contents. This is purely to make the results more readable. In future this should be altered to include
+the most relevant portion of the contents. 
+
+Database 
+
+I included an 'article_title' column in the magazine_contents database, but this is not included in the search in order to match the brief. In practice, I would make
+sure that the article_title was included in a keyword search, with high weighting as I believe it would be one of the more valuable matches.
+
+Optimisations
+
+When writing this API, I used asyncpg rather than SqlAlchemy, as I have seen that it produces faster results, and we are only building a simple, search-only API.
+The magazine_contents database has an extra column, 'keyword_search_vector', where the title, contents and author are pre-processed using ts_vector so that only
+this column needs to be searched for the keyword-search query. When building this column, I set the title and author parameters to have a higher weighting that the
+content, although this may not neccessarily produce the best results with a real system and should be tuned based on real-world requirements. 
+Both the keyword_search_vector column, and the vector_representaion column are indexed  in order to improve the efficiency of both search types.
+Adding in the filtering to include categories will not only produce more relevant results to the user, but should also improve the efficiency of the search.
+
+
